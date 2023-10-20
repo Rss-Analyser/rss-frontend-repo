@@ -87,14 +87,6 @@ def run_all_microservices():
 # Uncomment the next line to actually execute it.
 run_all_microservices()
 
-db_parameters = {
-        'dbname': 'rss_db',
-        'user': 'root',
-        'password': None,
-        'host': 'localhost',
-        'port': '26257'
-    }
-
 # If no specific target classes are provided, this will be an empty list
 #target_classes_input = input("Enter the target classes separated by comma (or press Enter to calculate for all classes): ")
 target_classes_input = []

@@ -7,14 +7,7 @@ sudo pip install streamlit
 sudo pip install psycopg2-binary
 sudo pip install plotly
 
-sudo yum install -y docker git
 sudo yum install ec2-instance-connect
-sudo systemctl start docker
-sudo systemctl enable docker
-sudo docker run -p 5001:5001 roboworksolutions/rss-feed-crawler-microservice:latest &
-sudo docker run -p 5014:5014 roboworksolutions/rss-sentiment-classifier-microservice:latest &
-sudo docker run -p 5003:5003 roboworksolutions/rss-classifier-microservice:latest &
-sudo docker run -p 5002:5002 roboworksolutions/rss-reader-microservice:latest &
 
 # Install CockroachDB
 
@@ -59,3 +52,12 @@ git clone https://github.com/Rss-Analyser/rss-frontend-repo.git
 # Start the streamlit app (you might need to adjust this based on how Streamlit is installed and started)
 
 sudo ~/.local/bin/streamlit run rss-frontend-repo/streamlit_sentiment_app.py --server.port 80 &
+
+git clone https://github.com/Rss-Analyser/rss-sentiment-classifier-microservice
+git clone https://github.com/Rss-Analyser/rss-classifier-microservice
+git clone https://github.com/Rss-Analyser/rss-feed-crawler-microservice
+git clone https://github.com/Rss-Analyser/rss-reader-microservice
+cd rss-reader && python3 app_rssReader.py &
+cd rss-reader && python3 app_rssFeedCrawler.py &
+cd rss-reader && python3 app_rssClassifier.py &
+cd rss-reader && python3 app_rssSentimentClassifier.py &

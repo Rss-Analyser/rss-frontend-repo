@@ -1,7 +1,7 @@
 import requests
 import time
 import json
-from sentiment_indicator import compute_semantic_indicator_for_all_tables
+from sentiment_indicator 
 
 class MicroServiceTest:
     def __init__(self, base_url, start_endpoint, start_payload=None, start_method='POST'):
@@ -86,18 +86,3 @@ def run_all_microservices():
 # This is just a function to run the microservices. 
 # Uncomment the next line to actually execute it.
 run_all_microservices()
-
-db_parameters = {
-        'dbname': 'rss_db',
-        'user': 'root',
-        'password': None,
-        'host': 'localhost',
-        'port': '26257'
-    }
-
-# If no specific target classes are provided, this will be an empty list
-#target_classes_input = input("Enter the target classes separated by comma (or press Enter to calculate for all classes): ")
-target_classes_input = []
-target_classes = [cls.strip() for cls in target_classes_input.split(',')] if target_classes_input else None
-
-compute_semantic_indicator_for_all_tables(db_parameters, target_classes)

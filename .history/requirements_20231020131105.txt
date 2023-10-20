@@ -1,0 +1,17 @@
+feedparser
+tenacity
+flask
+requests
+PyYAML
+psycopg2-binary
+
+flask
+bs4
+requests
+PyPDF2
+PyYAML
+lxml
+transformers
+torch
+torchvision
+psycopg2-binary

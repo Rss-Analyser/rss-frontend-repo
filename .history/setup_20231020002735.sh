@@ -5,7 +5,7 @@ sudo yum install python-pip -y
 
 sudo pip install streamlit
 sudo pip install psycopg2-binary
-sudo pip install plotly
+sudo pip install psycopg2-binary
 
 sudo yum install -y docker git
 sudo yum install ec2-instance-connect
