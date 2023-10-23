@@ -2,29 +2,22 @@
 import streamlit as st
 import psycopg2
 import plotly.graph_objects as go
-from math import ceil
-from plotly.subplots import make_subplots
-from sentiment_indicator import compute_semantic_indicator_for_all_tables
+
+import os
 
 # Database connection parameters
-db_params = {
-    'dbname': 'rss_db',
-    'user': 'root',
-    'password': None,
-    'host': 'localhost',
-    'port': '26257'
-}
+db_params = os.environ["DATABASE_URL"]
 
 
 def fetch_sentiment_tables():
-    with psycopg2.connect(**db_params) as conn:
+    with psycopg2.connect(db_params) as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT table_name FROM information_schema.tables WHERE table_name LIKE 'sentiment_indicators_%';")
         tables = [t[0] for t in cursor.fetchall()]
     return tables
 
 def fetch_sentiment_indices(table_name):
-    with psycopg2.connect(**db_params) as conn:
+    with psycopg2.connect(db_params) as conn:
         cursor = conn.cursor()
         cursor.execute(f"SELECT DISTINCT Class, sentiment_index, entry_count FROM {table_name};")
         indices = cursor.fetchall()
@@ -62,7 +55,7 @@ def main():
     target_classes_input = []
     target_classes = [cls.strip() for cls in target_classes_input.split(',')] if target_classes_input else None
 
-    compute_semantic_indicator_for_all_tables(db_params, target_classes)
+    # compute_semantic_indicator_for_all_tables(db_params, target_classes)
     
     # Fetch all sentiment indicator tables
     sentiment_tables = fetch_sentiment_tables()

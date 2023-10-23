@@ -1,0 +1,61 @@
+{
+    "steps": {
+        "extract": false,
+        "read": true,
+        "classify_titles": false,
+        "classify_sentiments": false,
+        "analyze_titles": false,
+        "fetch_and_print": false
+    },
+    "params": {
+        "URLS": [
+            "https://github.com/plenaryapp/awesome-rss-feeds",
+            "https://raw.githubusercontent.com/androidsx/micro-rss/master/list-of-feeds.txt",
+            "https://github.com/joshuawalcher/rssfeeds",
+            "https://raw.githubusercontent.com/impressivewebs/frontend-feeds/master/frontend-feeds.opml",
+            "https://raw.githubusercontent.com/tuan3w/awesome-tech-rss/main/feeds.opml",
+            "https://github.com/plenaryapp/awesome-rss-feeds/tree/master/recommended/with_category",
+            "https://github.com/plenaryapp/awesome-rss-feeds/tree/master/countries/without_category",
+            "https://gist.githubusercontent.com/stungeye/fe88fc810651174d0d180a95d79a8d97/raw/35cf2dc0db2c28aac21d03709592567c3fc60180/crypto_news.json",
+            "https://raw.githubusercontent.com/yavuz/news-feed-list-of-countries/master/news-feed-list-of-countries.json",
+            "https://raw.githubusercontent.com/git-list/security-rss-list/master/README.md"
+        ],
+        "RSS_LINKS": [
+            "http://127.0.0.1:1200/bloomberg/"
+        ],
+        "DEFAULT_CLASSES": [
+            "News",
+            "Entertainment",
+            "Sports",
+            "Economy",
+            "Technology",
+            "Science",
+            "Stock Market",
+            "Reviews",
+            "Business",
+            "Finance",
+            "Politics"
+        ],
+        "DEFAULT_THRESHOLD": "0.75",
+        "ANALYSIS_INSTRUCTION": "Context: You are a solopreneur a person who sets up and runs a business on their own:\nClassify the news headline importance in your context: high, medium, low\nDo a sentiment classification in your context: positive, negative, neutral\n Do a reasoning about your classification descision describe why. \nReturn a single json with following info:\n- Reason\n- Sentiment\n- Importance\nonly return the json without anything else",
+        "ANALYSIS_COLUMN_NAME_BASE": "stocktraderanalysis",
+        "ANALYSIS_LANGUAGES": [
+            "en",
+            "en-gb",
+            "en-US"
+        ],
+        "ANALYSIS_CLASSES": [
+            "Economy",
+            "Finance",
+            "Business",
+            "Stock Market",
+            "Technology",
+            "Politics"
+        ],
+        "TWEET_INSTRUCTION": "Context: You are a solopreneur a person who sets up and runs a business on their own.\nYou are generating tweets which need to be as controversial as possible.\nReturn a tweet written in a simple language as if you are a human.\nTry to extract the most important info from the article text for your context.\nImportant: Use maximum 280 characters."
+    },
+    "suffixes": {
+        "ANALYSIS_COLUMN_NAME": "_ANALYSIS",
+        "TWEET_COLUMN_NAME": "_ANALYSIS_GENERATED_TWEET"
+    }
+}
