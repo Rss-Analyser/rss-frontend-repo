@@ -11,7 +11,7 @@ def analyze_with_gpt4(title, custom_instruction):
     openai.api_key = st.secrets["openai"]["openai_api_key"]
 
     completion = openai.ChatCompletion.create(
-    model="gpt-4",
+    model="gpt-3.5-turbo",
     messages=[
         {"role": "system", "content": custom_instruction},
         {"role": "user", "content": title}
@@ -26,12 +26,11 @@ def analyze_titles_in_cockroachdb(db_params, custom_instruction, column_name, la
     cursor = conn.cursor()
     
     # Fetch table names with the given prefix "rss_entries_"
-    cursor.execute("SELECT table_name FROM information_schema.tables WHERE table_name LIKE 'rss_entries';")
+    cursor.execute("SELECT table_name FROM information_schema.tables WHERE table_name LIKE 'rss_entries%';")
     tables = cursor.fetchall()
     
     for table in tables:
         table_name = table[0]
-        date_suffix = table_name.split('_')[-1]
         
         # Check if column exists
         cursor.execute(f"SELECT column_name FROM information_schema.columns WHERE table_name='{table_name}' AND column_name='{column_name}';")
@@ -42,9 +41,14 @@ def analyze_titles_in_cockroachdb(db_params, custom_instruction, column_name, la
         
         # Construct the WHERE clause based on filters
         where_clauses = [f"\"{column_name}\" IS NULL"]  # Add condition to check NULL values
+        
+        # Check ai_language first. If that's NULL, then check the language column
+        language_clause = "(ai_language IS NOT NULL OR (ai_language IS NULL AND language NOT IN ('Unknown Language', '')))"
+        where_clauses.append(language_clause)
+        
         if language_filters:
             formatted_languages = ', '.join(['%s'] * len(language_filters))
-            where_clauses.append(f"language IN ({formatted_languages})")
+            where_clauses.append(f"(ai_language IN ({formatted_languages}) OR (ai_language IS NULL AND language IN ({formatted_languages})))")
         if class_filters:
             formatted_classes = ', '.join(['%s'] * len(class_filters))
             where_clauses.append(f"class IN ({formatted_classes})")
@@ -59,7 +63,7 @@ def analyze_titles_in_cockroachdb(db_params, custom_instruction, column_name, la
         titles = [row[0] for row in cursor.fetchall()]
         
         for title in titles:
-            analysis = analyze_with_gpt4(title, custom_instruction)
+            analysis = analyze_with_gpt4(title, custom_instruction)  # Assuming this function is defined somewhere
             print(analysis)
             
             # Since we're only fetching rows where the column is NULL, we can directly update

@@ -13,13 +13,21 @@ import uuid
 
 import base64
 
+def load_config():
+    with open("/Users/danieltremer/Documents/RssFeed_Analyser/rss-frontend-repo/rss_pipeline_scripts/config.json", "r") as file:
+        return json.load(file)
+    
+config_data = load_config()    
+params = config_data["params"]
+suffixes = config_data["suffixes"]
+
 # Supabase setup
 SUPABASE_URL = st.secrets["database"]["url"]
 SUPABASE_API_KEY = st.secrets["database"]["api_key"]
 
-ANALYSIS_COLUMN_NAME = "stocktraderanalysis"
-ANALYSIS_COLUMN_NAME = ANALYSIS_COLUMN_NAME+"_ANALYSIS"
-TWEET_COLUMN_NAME = ANALYSIS_COLUMN_NAME+"_GENERATED_TWEET"
+ANALYSIS_COLUMN_NAME = params["ANALYSIS_COLUMN_NAME_BASE"]
+ANALYSIS_COLUMN_NAME = ANALYSIS_COLUMN_NAME+suffixes["ANALYSIS_COLUMN_NAME"]
+TWEET_COLUMN_NAME = ANALYSIS_COLUMN_NAME+suffixes["TWEET_COLUMN_NAME"]
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_API_KEY)
 
@@ -178,12 +186,20 @@ if st.button("Schedule"):
     else:
         st.write(f"Error scheduling tweet: {response}")
 
+# Add user input fields for filtering
+config = load_config()
+days_back = st.slider("Filter by number of days back", 1, 365, 30)  # Default 30 days back
+selected_class = st.selectbox("Filter by Class", config["params"]["ANALYSIS_CLASSES"])  # Replace with your actual classes
 
-def fetch_generated_tweets_from_db(db_params):
+# Modify fetch_generated_tweets_from_db function to include filtering
+def fetch_generated_tweets_from_db(db_params, days_back, selected_class):
     try:
         # Connect to the database
         conn = psycopg2.connect(db_params)
         cursor = conn.cursor()
+
+        # Calculate the date x days back from today
+        past_date = (datetime.datetime.now() - datetime.timedelta(days=days_back)).strftime('%Y-%m-%d')
         
         # Fetch table names with the prefix "rss_entries_"
         cursor.execute("SELECT table_name FROM information_schema.tables WHERE table_name LIKE 'rss_entries';")
@@ -195,12 +211,19 @@ def fetch_generated_tweets_from_db(db_params):
         for table in tables:
             table_name = table[0]
             
-            # Fetch generated_tweet, link, title, published_date, publisher, and ANALYSIS_COLUMN_NAME
-            cursor.execute(f"SELECT title, link, \"{TWEET_COLUMN_NAME}\", published, publisher, \"{ANALYSIS_COLUMN_NAME}\" FROM {table_name} WHERE \"{TWEET_COLUMN_NAME}\" IS NOT NULL;")
+            # Construct WHERE clause for date filtering and optional class filtering
+            where_clauses = [f"published >= '{past_date}'"]
+            if selected_class != "All Classes":
+                where_clauses.append(f"class = '{selected_class}'")
+
+            where_clause = " AND ".join(where_clauses)
+
+            # Fetch generated_tweet, link, title, published_date, publisher, class, and ANALYSIS_COLUMN_NAME
+            cursor.execute(f"SELECT title, link, class, \"{TWEET_COLUMN_NAME}\", published, publisher, \"{ANALYSIS_COLUMN_NAME}\" FROM {table_name} WHERE {where_clause};")
             entries = cursor.fetchall()
 
             for entry in entries:
-                title, link, tweet, published_date, publisher, analysis_data = entry
+                title, link, tweet_class, tweet, published_date, publisher, analysis_data = entry
 
                 # Extract reason from the analysis_data
                 try:
@@ -214,6 +237,7 @@ def fetch_generated_tweets_from_db(db_params):
                 tweets_data.append({
                     "title": title,
                     "link": link,
+                    "class": tweet_class,
                     "tweet": tweet,
                     "published": published_date,
                     "publisher": publisher,
@@ -234,7 +258,7 @@ def fetch_generated_tweets_from_db(db_params):
 st.title("Generated Tweets from Database")
 
 db_params = st.secrets["cockroachdb"]["connection_string"]
-tweets_data = fetch_generated_tweets_from_db(db_params)
+tweets_data = fetch_generated_tweets_from_db(db_params, days_back, selected_class)
 
 def post_instant_tweet(api_key, api_secret, access_token, access_token_secret, content, link):
     try:
@@ -262,7 +286,12 @@ def post_instant_tweet(api_key, api_secret, access_token, access_token_secret, c
 tweets_data = sorted(tweets_data, key=lambda x: x.get('published', ''), reverse=True)
 
 for data in tweets_data:
-    tweet_content = data['tweet'].strip('"')
+
+    
+    tweet_content = (data['tweet'] or "").strip('"')
+    if not tweet_content or tweet_content == "No content due to empty title.":  # Skip the entry if the tweet content is empty
+        continue
+
     tweet_link = data['link']
     tweet_title = data['title']
     tweet_published_date = data.get('published', 'Unknown Date')

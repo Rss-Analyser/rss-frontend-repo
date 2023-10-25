@@ -31,32 +31,37 @@ class RSSReader:
         
     @retry(stop=stop_after_attempt(3), wait=wait_fixed(2))
     def _fetch_rss_entries(self, rss_link):
+        feed = feedparser.parse(rss_link)
+        
+        # Check if feedparser output is empty or erroneous
+        if not feed.entries:
+            print(f"Error fetching or empty content for RSS link: {rss_link}. Marking as dead.")
+            mark_link_as_dead(rss_link)
+            return set()
 
-            feed = feedparser.parse(rss_link)
-            current_entries = set()
-            cutoff_date = datetime.now() - timedelta(days=self.days_to_crawl)
+        current_entries = set()
+        cutoff_date = datetime.now() - timedelta(days=self.days_to_crawl)
+        publisher_name = feed.feed.title if hasattr(feed.feed, 'title') else "Unknown Publisher"
+        language = feed.feed.language if hasattr(feed.feed, 'language') else "Unknown Language" 
 
-            publisher_name = feed.feed.title if hasattr(feed.feed, 'title') else "Unknown Publisher"
-            language = feed.feed.language if hasattr(feed.feed, 'language') else "Unknown Language" 
-
-            for entry in feed.entries:
+        for entry in feed.entries:
+            try:
+                title = entry.title if hasattr(entry, 'title') else ""
+                link = entry.link if hasattr(entry, 'link') else ""
+                published = entry.published if hasattr(entry, 'published') else ""
 
                 try:
-                    title = entry.title if hasattr(entry, 'title') else ""
-                    link = entry.link if hasattr(entry, 'link') else ""
-                    published = entry.published if hasattr(entry, 'published') else ""
-
-                    try:
-                        pub_date = datetime.strptime(published, '%a, %d %b %Y %H:%M:%S %Z')
-                        if pub_date >= cutoff_date:
-                            current_entries.add((publisher_name, title, link, published, language))
-                    except ValueError:
-                        pass
-                except Exception as e:
-                    print(e)
+                    pub_date = datetime.strptime(published, '%a, %d %b %Y %H:%M:%S %Z')
+                    if pub_date >= cutoff_date:
+                        current_entries.add((publisher_name, title, link, published, language))
+                except ValueError:
                     pass
+            except Exception as e:
+                print(f"Error processing entry for RSS link {rss_link}: {e}")
+                pass
 
-            return current_entries
+        return current_entries
+
 
     def _save_to_db(self, entries, table_name):
         with psycopg2.connect(self.database) as conn:
@@ -103,6 +108,7 @@ class RSSReader:
 DATABASE_PATH = st.secrets["cockroachdb"]["connection_string"]
 CHUNK_SIZE = 50  # Adjust as needed
 DAYS_TO_CRAWL = 1  # Adjust as needed
+LINKS_CRAWLED = 0
 
 RSS_READER_STATUS = {
     "status": "idle",
@@ -114,13 +120,15 @@ RSS_READER_STATUS = {
 }
 
 entries_lock = threading.Lock()  # Lock for thread-safe updates
+links_lock = threading.Lock()
 
 def fetch_rss_links_from_db(chunk_size=CHUNK_SIZE):
     """Fetch RSS links from the database and split them into chunks."""
+    add_dead_link_column()
     try:
         with psycopg2.connect(DATABASE_PATH) as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT link FROM rss_links")
+            cursor.execute("SELECT link FROM rss_links WHERE dead_link = FALSE")
             all_links = [row[0] for row in cursor.fetchall()]
     except psycopg2.Error as e:
         print(f"Database error: {e}")
@@ -129,6 +137,20 @@ def fetch_rss_links_from_db(chunk_size=CHUNK_SIZE):
     # Splitting the all_links list into chunks of size chunk_size
     for i in range(0, len(all_links), chunk_size):
         yield all_links[i:i + chunk_size]
+
+def mark_link_as_dead(rss_link):
+    with psycopg2.connect(DATABASE_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute("UPDATE rss_links SET dead_link = TRUE WHERE link = %s", (rss_link,))
+        conn.commit()
+
+def add_dead_link_column():
+    with psycopg2.connect(DATABASE_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+        ALTER TABLE rss_links ADD COLUMN IF NOT EXISTS dead_link BOOLEAN DEFAULT FALSE;
+        ''')
+        conn.commit()
 
 def fetch_single_rss_link(rss_link, done_event):
     """
@@ -139,17 +161,19 @@ def fetch_single_rss_link(rss_link, done_event):
         reader = RSSReader(DATABASE_PATH, days_to_crawl=DAYS_TO_CRAWL)
         reader.start([rss_link])
     except RetryError:
-        print(f"Failed to fetch RSS from {rss_link} after multiple retries. Skipping this link.")
+        print(f"Error: Failed to fetch content from RSS link {rss_link} after multiple retries. Skipping this link.")
     finally:
         done_event.set()
+        
 
 def fetch_rss_data_chunk(rss_links_chunk):
     global RSS_READER_STATUS
+    global LINKS_CRAWLED
 
-    TIMEOUT_DURATION = 10  # e.g., 10 seconds
+    TIMEOUT_DURATION = 20  # e.g., 10 seconds
 
     for rss_link in rss_links_chunk:
-        print(rss_link)
+        # print(rss_link)
 
         max_attempts = 3
         attempts = 0
@@ -162,12 +186,14 @@ def fetch_rss_data_chunk(rss_links_chunk):
             rss_thread.start()
 
             done_event.wait(timeout=TIMEOUT_DURATION)
+            print(f"Warning: Fetching RSS from {rss_link} took longer than {TIMEOUT_DURATION} seconds, skipping.")
             
             if not done_event.is_set():
-                print(f"Fetching RSS from {rss_link} took too long. Skipping this link.")
+                print(f"Fetching RSS from {rss_link} took too long, skipping.")
+                # mark_link_as_dead(rss_link)
                 with entries_lock:  # Ensuring thread-safe updates
                     RSS_READER_STATUS["rss_feeds_crawled"] += 1
-                break
+                continue
 
             try:
                 with psycopg2.connect(DATABASE_PATH) as conn:
@@ -181,7 +207,7 @@ def fetch_rss_data_chunk(rss_links_chunk):
                 break
 
             except RetryError:
-                print(f"Failed to fetch RSS from {rss_link} after multiple retries. Skipping this link.")
+                print(f"Error: Failed to fetch content from RSS link {rss_link} after multiple retries. Skipping this link.")
                 with entries_lock:  # Ensuring thread-safe updates
                     RSS_READER_STATUS["rss_feeds_crawled"] += 1
                 break
@@ -191,14 +217,19 @@ def fetch_rss_data_chunk(rss_links_chunk):
                     # Database is locked, wait and retry
                     time.sleep(1)  # Wait for a second before retrying
                     attempts += 1
-                    print(e)
-                    print(f"retry: {attempts}")
+                    # print(e)
+                    # print(f"retry: {attempts}")
+                    print(f"Warning: Database locked while processing {rss_link}. Retry {attempts} of {max_attempts}.")
 
             except Exception as e:
                 print(f"Unexpected error for {rss_link}: {str(e)}")
                 with entries_lock:  # Ensuring thread-safe updates
                     RSS_READER_STATUS["rss_feeds_crawled"] += 1
+                    
                 break
+            with links_lock:
+                LINKS_CRAWLED += 1
+                print(f"Links Crawled: {LINKS_CRAWLED}")
 
     return "success"
 

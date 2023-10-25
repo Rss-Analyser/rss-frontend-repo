@@ -4,6 +4,7 @@
         "read": true,
         "classify_titles": false,
         "classify_sentiments": false,
+        "classify_language": false,
         "analyze_titles": false,
         "fetch_and_print": false
     },
@@ -18,10 +19,18 @@
             "https://github.com/plenaryapp/awesome-rss-feeds/tree/master/countries/without_category",
             "https://gist.githubusercontent.com/stungeye/fe88fc810651174d0d180a95d79a8d97/raw/35cf2dc0db2c28aac21d03709592567c3fc60180/crypto_news.json",
             "https://raw.githubusercontent.com/yavuz/news-feed-list-of-countries/master/news-feed-list-of-countries.json",
-            "https://raw.githubusercontent.com/git-list/security-rss-list/master/README.md"
+            "https://raw.githubusercontent.com/git-list/security-rss-list/master/README.md",
+            "https://gist.githubusercontent.com/webpro/5907452/raw/a71a3b59c108267fb667510dbe91154035f1ed10/feeds.opml",
+            "https://raw.githubusercontent.com/outcoldman/hackernews-personal-blogs/master/list.opml",
+            "https://raw.githubusercontent.com/matthiasjost/dotnet-creators-opml/main/OPML/blog-opml.xml",
+            "https://raw.githubusercontent.com/EllyLoel/RSS-feed-collection/main/subscriptions.xml",
+            "https://raw.githubusercontent.com/scripting/feedsForJournalists/master/list.opml",
+            "https://raw.githubusercontent.com/vortexau/FeedlySecurityFeeds/master/feedly-security.opml"
         ],
         "RSS_LINKS": [
-            "http://127.0.0.1:1200/bloomberg/"
+            "http://127.0.0.1:1200/bloomberg/",
+            "http://127.0.0.1:1200/dlnews",
+            "http://127.0.0.1:1200/appleinsider"
         ],
         "DEFAULT_CLASSES": [
             "News",
@@ -34,25 +43,30 @@
             "Reviews",
             "Business",
             "Finance",
-            "Politics"
+            "Politics",
+            "Entrepreneur",
+            "Solopreneur"
         ],
         "DEFAULT_THRESHOLD": "0.75",
-        "ANALYSIS_INSTRUCTION": "Context: You are a solopreneur a person who sets up and runs a business on their own:\nClassify the news headline importance in your context: high, medium, low\nDo a sentiment classification in your context: positive, negative, neutral\n Do a reasoning about your classification descision describe why. \nReturn a single json with following info:\n- Reason\n- Sentiment\n- Importance\nonly return the json without anything else",
-        "ANALYSIS_COLUMN_NAME_BASE": "stocktraderanalysis",
+        "ANALYSIS_INSTRUCTION": "Context: You are a solopreneur a solopreneur is a person who sets up a business, of which they are the sole employee. A solopreneur is both the owner and the workforce of their business. They are responsible for organizing, managing, and assuming the risks of their enterprise, without the help of a partner:\nClassify the news headline importance in your context: high, medium, low\nDo a sentiment classification in your context: positive, negative, neutral\n Do a reasoning about your classification descision describe why. \nReturn a single json with following info:\n- Reason\n- Sentiment\n- Importance\nonly return the json without anything else",
+        "ANALYSIS_COLUMN_NAME_BASE": "general_feeds",
         "ANALYSIS_LANGUAGES": [
             "en",
             "en-gb",
-            "en-US"
+            "en-US",
+            "en-us",
+            "en-GB",
+            "en-Gb",
+            "en-Us"
         ],
         "ANALYSIS_CLASSES": [
             "Economy",
-            "Finance",
             "Business",
-            "Stock Market",
             "Technology",
-            "Politics"
+            "Solopreneur",
+            "Entrepreneur"
         ],
-        "TWEET_INSTRUCTION": "Context: You are a solopreneur a person who sets up and runs a business on their own.\nYou are generating tweets which need to be as controversial as possible.\nReturn a tweet written in a simple language as if you are a human.\nTry to extract the most important info from the article text for your context.\nImportant: Use maximum 280 characters."
+        "TWEET_INSTRUCTION": "Context: You are a solopreneur a solopreneur is a person who sets up a business, of which they are the sole employee. A solopreneur is both the owner and the workforce of their business. They are responsible for organizing, managing, and assuming the risks of their enterprise, without the help of a partner.\nYou are generating tweets which need to be as controversial as possible.\nReturn a tweet written in a simple language as if you are a human.\nTry to extract the most important info from the article text for your context.\nImportant: Use maximum 280 characters."
     },
     "suffixes": {
         "ANALYSIS_COLUMN_NAME": "_ANALYSIS",

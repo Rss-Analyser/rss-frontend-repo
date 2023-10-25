@@ -6,6 +6,7 @@ from RssEntryClassifier import classify_titles_from_db
 from RssEntrySentiment import classify_sentiments_in_db
 from RssOpenAiAnalyser import analyze_titles_in_cockroachdb
 from RssGenerateTweets import fetch_high_importance_entries
+from RssAiLanguageDetect import classify_titles_language_from_db
 
 DATABASE_PATH = st.secrets["cockroachdb"]["connection_string"]
 
@@ -29,10 +30,14 @@ def main_pipeline():
     # RSS Reader Execution
     if config["steps"]["read"]:
         run_rss_reader()
+
+    if config["steps"]["classify_language"]:
+        classify_titles_language_from_db(DATABASE_PATH)
     
     # Classify Titles
     if config["steps"]["classify_titles"]:
-        classify_titles_from_db(DATABASE_PATH, classes=config["params"]["DEFAULT_CLASSES"], threshold=config["params"]["DEFAULT_THRESHOLD"])
+        threshold = float(config["params"]["DEFAULT_THRESHOLD"])
+        classify_titles_from_db(DATABASE_PATH, classes=config["params"]["DEFAULT_CLASSES"], threshold=threshold)
     
     # Classify Sentiments
     if config["steps"]["classify_sentiments"]:
