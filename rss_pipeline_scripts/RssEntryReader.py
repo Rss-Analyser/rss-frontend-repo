@@ -29,7 +29,7 @@ class RSSReader:
             cursor.execute(f"SELECT publisher, title, link, published, language FROM {table_name}")
             return set(cursor.fetchall())
         
-    @retry(stop=stop_after_attempt(3), wait=wait_fixed(2))
+    @retry(stop=stop_after_attempt(1), wait=wait_fixed(20))
     def _fetch_rss_entries(self, rss_link):
         feed = feedparser.parse(rss_link)
         
@@ -106,7 +106,7 @@ class RSSReader:
 
 
 DATABASE_PATH = st.secrets["cockroachdb"]["connection_string"]
-CHUNK_SIZE = 50  # Adjust as needed
+CHUNK_SIZE = 5  # Adjust as needed
 DAYS_TO_CRAWL = 1  # Adjust as needed
 LINKS_CRAWLED = 0
 
@@ -166,33 +166,35 @@ def fetch_single_rss_link(rss_link, done_event):
         done_event.set()
         
 
+TIMEOUT_DURATION = 30  # Increase the timeout duration to 60 seconds
+
+def fetch_single_rss_link(rss_link, done_event):
+    try:
+        reader = RSSReader(DATABASE_PATH, days_to_crawl=DAYS_TO_CRAWL)
+        reader.start([rss_link])
+    except Exception as e:
+        print(f"Error: Failed to fetch content from RSS link {rss_link}: {e}")
+    finally:
+        done_event.set()
+
 def fetch_rss_data_chunk(rss_links_chunk):
     global RSS_READER_STATUS
     global LINKS_CRAWLED
 
-    TIMEOUT_DURATION = 20  # e.g., 10 seconds
-
     for rss_link in rss_links_chunk:
-        # print(rss_link)
-
         max_attempts = 3
         attempts = 0
 
         while attempts < max_attempts:
             done_event = threading.Event()
-            # rss_thread = threading.Thread(target=fetch_single_rss_link, args=(rss_link, done_event))
             rss_thread = threading.Thread(target=fetch_single_rss_link, args=(rss_link, done_event), daemon=True)
-
             rss_thread.start()
 
             done_event.wait(timeout=TIMEOUT_DURATION)
-            print(f"Warning: Fetching RSS from {rss_link} took longer than {TIMEOUT_DURATION} seconds, skipping.")
-            
+
             if not done_event.is_set():
-                print(f"Fetching RSS from {rss_link} took too long, skipping.")
-                # mark_link_as_dead(rss_link)
-                with entries_lock:  # Ensuring thread-safe updates
-                    RSS_READER_STATUS["rss_feeds_crawled"] += 1
+                print(f"Fetching RSS from {rss_link} took too long, retrying.")
+                attempts += 1
                 continue
 
             try:
@@ -206,32 +208,24 @@ def fetch_rss_data_chunk(rss_links_chunk):
                         RSS_READER_STATUS["rss_feeds_crawled"] += 1
                 break
 
-            except RetryError:
-                print(f"Error: Failed to fetch content from RSS link {rss_link} after multiple retries. Skipping this link.")
-                with entries_lock:  # Ensuring thread-safe updates
-                    RSS_READER_STATUS["rss_feeds_crawled"] += 1
-                break
-
             except psycopg2.OperationalError as e:
                 if "database is locked" in str(e):
                     # Database is locked, wait and retry
-                    time.sleep(1)  # Wait for a second before retrying
+                    time.sleep(2)  # Wait for 2 seconds before retrying
                     attempts += 1
-                    # print(e)
-                    # print(f"retry: {attempts}")
                     print(f"Warning: Database locked while processing {rss_link}. Retry {attempts} of {max_attempts}.")
 
             except Exception as e:
                 print(f"Unexpected error for {rss_link}: {str(e)}")
                 with entries_lock:  # Ensuring thread-safe updates
                     RSS_READER_STATUS["rss_feeds_crawled"] += 1
-                    
                 break
             with links_lock:
                 LINKS_CRAWLED += 1
                 print(f"Links Crawled: {LINKS_CRAWLED}")
 
     return "success"
+
 
 def run_rss_reader():
     global RSS_READER_STATUS
@@ -252,5 +246,5 @@ def run_rss_reader():
 
     return 0
 
-# if __name__ == "__main__":
-#     run_rss_reader()
+if __name__ == "__main__":
+    run_rss_reader()

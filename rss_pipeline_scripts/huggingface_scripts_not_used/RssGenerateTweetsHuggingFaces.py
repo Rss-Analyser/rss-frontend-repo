@@ -1,14 +1,18 @@
 import psycopg2
 import json
 import os
-import openai
-
 import streamlit as st
-
 import requests
 from bs4 import BeautifulSoup
-
 from newspaper import Article
+
+# Endpoint and token placeholder for HuggingFace
+API_URL = "https://x7541o6ju3rir98g.us-east-1.aws.endpoints.huggingface.cloud"
+token = st.secrets["huggingfaces"]["token"]
+
+HEADERS = {
+    "Authorization": token
+}
 
 def fetch_article_content(link):
     try:
@@ -16,9 +20,27 @@ def fetch_article_content(link):
         article.download()
         article.parse()
         return article.text
+    
     except Exception as e:
         print(f"Failed to fetch content for link {link}. Error: {e}")
         return None
+
+def analyze_with_huggingface(content, custom_instruction):
+    if not content:
+        print("Skipping empty content.")
+        return {"content": "No content due to empty article content."}
+
+    payload = {
+        "inputs": custom_instruction + "\n" + content,
+    }
+    response = requests.post(API_URL, headers=HEADERS, json=payload)
+    
+    # Handling the response to extract the content
+    if response.status_code == 200:
+        return response.json()
+    else:
+        print(f"Error from HuggingFace API: {response.text}")
+        return {"content": "Error while processing."}
 
 def fetch_content_from_link(link):
     try:
@@ -28,53 +50,6 @@ def fetch_content_from_link(link):
     except Exception as e:
         print(f"Failed to fetch content for link {link}. Error: {e}")
         return None
-    
-
-# Placeholder for GPT-4
-def analyze_with_gpt4(title, custom_instruction):
-    # Normally, here you would send the title to GPT-4 with the custom instruction
-    # and get the response. For now, I'm just returning a dummy JSON.
-
-    if not title:
-        print("Skipping empty content.")
-        return {"content": "No content due to empty article content."}
-    
-    openai.api_key =  st.secrets["openai"]["openai_api_key"]
-
-    completion = openai.ChatCompletion.create(
-    model="gpt-4",
-    messages=[
-        {"role": "system", "content": custom_instruction},
-        {"role": "user", "content": title}
-    ],
-    # max_tokens=70,
-    )
-    return completion.choices[0].message
-
-def generate_valid_tweet(content, custom_tweet_instruction_generation):
-    custom_tweet_instruction = """
-    
-    Create a shorter text with the same content and character lenght below or equal 280 
-    don't mention the character lenght in the text try to maximize the content lenght but stay below 280 characters, 
-    don't start and end with double quotes: 
-    
-    """
-    
-    # Initially, generate a tweet
-    generated_tweet = analyze_with_gpt4(content, custom_tweet_instruction_generation)["content"]
-    
-    # While the tweet's character count is over 280, keep regenerating
-    while len(generated_tweet) > 280:
-        print("------")
-        print(generated_tweet)
-        print(f"tweet is too long ({len(generated_tweet)}) paraphrasing:")
-        generated_tweet = generated_tweet + " character lenght is: " + str(len(generated_tweet))
-        generated_tweet = analyze_with_gpt4(generated_tweet, custom_tweet_instruction)["content"]
-        print("new tweet:")
-        print(generated_tweet)
-        print("------")
-
-    return generated_tweet
 
 def fetch_high_importance_entries(db_params, custom_instruction, column_name, analysis_column_name):
     # Connect to the database
@@ -120,76 +95,66 @@ def fetch_high_importance_entries(db_params, custom_instruction, column_name, an
             title, link, text_data, _ = entry
 
             try:
-                # Convert the text data into JSON
-                data = json.loads(json.loads(text_data)["content"])
-                
-                importance = data.get("Importance")
-                if importance and importance.lower() == "high":
+                # Check if the substring "Importance: high" is present in the text_data
+                if "Importance: high" in text_data:
                     high_importance_entries.append({
                         "title": title,
                         "link": link,
-                        "analysis": data
+                        "analysis": text_data
                     })
-            except (json.JSONDecodeError, KeyError):
-                print("Json decode error")
-                # Handle cases where the data isn't valid JSON or doesn't have the expected structure
-                pass
+            except Exception as e:
+                print(f"Unexpected error for title '{title}': {e}")
 
     for entry in high_importance_entries:
         try:
-            # Check if the tweet already exists for this entry
-            cursor.execute(f'''
-            SELECT "{column_name}" FROM {table_name} 
-            WHERE link = %s;
-            ''', (entry["link"],))
-            existing_tweet = cursor.fetchone()
-
-            # If tweet doesn't exist, generate and update
-            if not existing_tweet or existing_tweet[0] is None:
+            if cursor.rowcount == 0:
+                print(f"No rows were updated for entry {entry['title']} because a tweet already exists.")
+            else:
                 custom_tweet_instruction = custom_instruction + "\nYou should concentrate on: " + entry["title"]
                 content = fetch_article_content(entry["link"])
                 entry['content'] = content
+                            # Analyze and update entry
+                generated_tweet = analyze_with_huggingface(content, custom_tweet_instruction)
 
-                generated_tweet = generate_valid_tweet(content, custom_tweet_instruction)
-                
-                # Save the tweet to the database
-                print(f"Updating entry with link: {entry['link']}")
+                print(generated_tweet)
+                        
+                # Check if the current value of the column is empty (i.e., NULL) and then save the tweet to the database
                 cursor.execute(f'''
                 UPDATE {table_name} 
                 SET "{column_name}" = %s 
-                WHERE link = %s;
+                WHERE link = %s AND "{column_name}" IS NULL;
                 ''', (generated_tweet, entry["link"]))
-                print(f"Rows updated: {cursor.rowcount}")
                 conn.commit()  # Commit the transaction after updating the tweet
 
                 entry['tweet'] = generated_tweet
-                print(entry['tweet'])
-                # yield entry
-            else:
-                print(f"Tweet already exists for entry {entry['title']}.")
+                # print(entry['tweet'])
+                yield entry
 
         except Exception as e:
             print(f"Error processing entry {entry['title']}. Error: {e}")
+        
+    cursor.close()
+    conn.close()
 
-
-    
 if __name__ == "__main__":
+
+    custom_instruction = """
+        You are a solopreneur a person who sets up and runs a business on their own.
+        You are generating tweets which need to be as controversial as possible.
+        Return a tweet written in a simple language as if you are a human.
+        Important: Use maximum 280 characters.
+        """
 
     def load_config():
         with open("/Users/danieltremer/Documents/RssFeed_Analyser/rss-frontend-repo/rss_pipeline_scripts/config.json", "r") as file:
             return json.load(file)
-
+    # Example usage
     config = load_config()
 
+    db_params = st.secrets["cockroachdb"]["connection_string"]
     # Apply suffixes
     ANALYSIS_COLUMN_NAME = config["params"]["ANALYSIS_COLUMN_NAME_BASE"] + config["suffixes"]["ANALYSIS_COLUMN_NAME"]
     TWEET_COLUMN_NAME = config["params"]["ANALYSIS_COLUMN_NAME_BASE"] + config["suffixes"]["TWEET_COLUMN_NAME"]
 
-    # print(ANALYSIS_COLUMN_NAME)
-    # print(TWEET_COLUMN_NAME)
-
-# Example usage
-    db_params = st.secrets["cockroachdb"]["connection_string"]
-
-    fetch_high_importance_entries(db_params, config["params"]["TWEET_INSTRUCTION"], column_name=TWEET_COLUMN_NAME, analysis_column_name=ANALYSIS_COLUMN_NAME)
-    
+    for result in fetch_high_importance_entries(db_params, custom_instruction, TWEET_COLUMN_NAME, ANALYSIS_COLUMN_NAME):
+        print(result)

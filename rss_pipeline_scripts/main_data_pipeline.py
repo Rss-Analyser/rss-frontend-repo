@@ -5,8 +5,10 @@ from RssEntryReader import run_rss_reader
 from RssEntryClassifier import classify_titles_from_db
 from RssEntrySentiment import classify_sentiments_in_db
 from RssOpenAiAnalyser import analyze_titles_in_cockroachdb
+
 from RssGenerateTweets import fetch_high_importance_entries
 from RssAiLanguageDetect import classify_titles_language_from_db
+# from RssHuggingfacesAiAnalyser import analyze_titles_in_cockroachdb
 
 DATABASE_PATH = st.secrets["cockroachdb"]["connection_string"]
 
@@ -53,11 +55,11 @@ def main_pipeline():
     
     # Fetch and Print High Importance Entries create tweets
     if config["steps"]["fetch_and_print"]:
-        for result in fetch_high_importance_entries(DATABASE_PATH, config["params"]["TWEET_INSTRUCTION"], TWEET_COLUMN_NAME, ANALYSIS_COLUMN_NAME):
-            print(result)
+        fetch_high_importance_entries(DATABASE_PATH, config["params"]["TWEET_INSTRUCTION"], TWEET_COLUMN_NAME, ANALYSIS_COLUMN_NAME)
+
 
 
     return 0
 
-# if __name__ == "__main__":
-#     main()
+if __name__ == "__main__":
+    main_pipeline()

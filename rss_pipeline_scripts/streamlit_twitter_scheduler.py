@@ -25,9 +25,9 @@ suffixes = config_data["suffixes"]
 SUPABASE_URL = st.secrets["database"]["url"]
 SUPABASE_API_KEY = st.secrets["database"]["api_key"]
 
-ANALYSIS_COLUMN_NAME = params["ANALYSIS_COLUMN_NAME_BASE"]
-ANALYSIS_COLUMN_NAME = ANALYSIS_COLUMN_NAME+suffixes["ANALYSIS_COLUMN_NAME"]
-TWEET_COLUMN_NAME = ANALYSIS_COLUMN_NAME+suffixes["TWEET_COLUMN_NAME"]
+# Apply suffixes
+ANALYSIS_COLUMN_NAME = config_data["params"]["ANALYSIS_COLUMN_NAME_BASE"] + config_data["suffixes"]["ANALYSIS_COLUMN_NAME"]
+TWEET_COLUMN_NAME = config_data["params"]["ANALYSIS_COLUMN_NAME_BASE"] + config_data["suffixes"]["TWEET_COLUMN_NAME"]
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_API_KEY)
 
@@ -289,7 +289,7 @@ for data in tweets_data:
 
     
     tweet_content = (data['tweet'] or "").strip('"')
-    if not tweet_content or tweet_content == "No content due to empty title.":  # Skip the entry if the tweet content is empty
+    if not tweet_content or tweet_content == "No content due to empty article content.":  # Skip the entry if the tweet content is empty
         continue
 
     tweet_link = data['link']
@@ -316,18 +316,26 @@ for data in tweets_data:
         st.write(f"Publisher: {tweet_publisher}")
         st.write(f"Reason: {tweet_reason}")
 
+    button_key = f"post_button_{hash(tweet_content)}"
+
     with col2:
-        if st.button(f"Post {hash(tweet_content)}", key=f"post_button_{uuid.uuid4()}"):
-            # Post the tweet
-            client_v1 = get_twitter_conn_v1(api_key, api_secret, access_token, access_token_secret)
-            client_v2 = get_twitter_conn_v2(api_key, api_secret, access_token, access_token_secret)
+        if st.button(f"Post {hash(tweet_content)}", key=button_key):
+            st.write("Button was clicked!")
+
+            try:
+                client_v1 = get_twitter_conn_v1(api_key, api_secret, access_token, access_token_secret)
+                client_v2 = get_twitter_conn_v2(api_key, api_secret, access_token, access_token_secret)
+            except Exception as e:
+                st.write(f"Error establishing Twitter connection: {e}")
 
             # Post the edited tweet content
             tweet = client_v2.create_tweet(text=edited_tweet)
             
-            # Post the link as a reply
-            time.sleep(1.0)  # Pause to avoid rate limits
-            client_v2.create_tweet(text=tweet_link, in_reply_to_tweet_id=tweet.data["id"])
+            try:
+                time.sleep(1.0)  # Pause to avoid rate limits
+                client_v2.create_tweet(text=tweet_link, in_reply_to_tweet_id=tweet.data["id"])
+            except Exception as e:
+                st.write(f"Error posting reply tweet: {e}")
 
             st.success("Tweet and reply posted successfully!")
 

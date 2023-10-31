@@ -1,12 +1,12 @@
 {
     "steps": {
-        "extract": false,
+        "extract": true,
         "read": true,
-        "classify_titles": false,
-        "classify_sentiments": false,
-        "classify_language": false,
-        "analyze_titles": false,
-        "fetch_and_print": false
+        "classify_titles": true,
+        "classify_sentiments": true,
+        "classify_language": true,
+        "analyze_titles": true,
+        "fetch_and_print": true
     },
     "params": {
         "URLS": [
@@ -45,11 +45,12 @@
             "Finance",
             "Politics",
             "Entrepreneur",
-            "Solopreneur"
+            "Solopreneur",
+            "AI, Artificial Intelligence"
         ],
-        "DEFAULT_THRESHOLD": "0.75",
-        "ANALYSIS_INSTRUCTION": "Context: You are a solopreneur a solopreneur is a person who sets up a business, of which they are the sole employee. A solopreneur is both the owner and the workforce of their business. They are responsible for organizing, managing, and assuming the risks of their enterprise, without the help of a partner:\nClassify the news headline importance in your context: high, medium, low\nDo a sentiment classification in your context: positive, negative, neutral\n Do a reasoning about your classification descision describe why. \nReturn a single json with following info:\n- Reason\n- Sentiment\n- Importance\nonly return the json without anything else",
-        "ANALYSIS_COLUMN_NAME_BASE": "general_feeds",
+        "DEFAULT_THRESHOLD": 0.77,
+        "ANALYSIS_INSTRUCTION": "Context: You are a writer for AI, Science and technology topics and news, your interest is in every new AI innovations and Robotics and Technology innovations.\nClassify the news headline importance in your context: high, medium, low\nDo a sentiment classification in your context: positive, negative, neutral\nDo a reasoning about your classification decision describe why. \n\nReturn a single json with following info: \n- Reason\n- Sentiment\n- Importance\nonly return the json without anything else",
+        "ANALYSIS_COLUMN_NAME_BASE": "ai_bot",
         "ANALYSIS_LANGUAGES": [
             "en",
             "en-gb",
@@ -60,13 +61,11 @@
             "en-Us"
         ],
         "ANALYSIS_CLASSES": [
-            "Economy",
-            "Business",
             "Technology",
-            "Solopreneur",
-            "Entrepreneur"
+            "Science",
+            "AI, Artificial Intelligence"
         ],
-        "TWEET_INSTRUCTION": "Context: You are a solopreneur a solopreneur is a person who sets up a business, of which they are the sole employee. A solopreneur is both the owner and the workforce of their business. They are responsible for organizing, managing, and assuming the risks of their enterprise, without the help of a partner.\nYou are generating tweets which need to be as controversial as possible.\nReturn a tweet written in a simple language as if you are a human.\nTry to extract the most important info from the article text for your context.\nImportant: Use maximum 280 characters."
+        "TWEET_INSTRUCTION": "Context: You are a writer for AI, Science and technology topics and news, your interest is in every new AI innovations and Robotics and Technology innovations.\nReturn a tweet written in a simple language as if you are a human.\nTry to extract the most important information from the article text for your context.\nImportant: Use maximum 280 characters. Don't start and end with double quotes"
     },
     "suffixes": {
         "ANALYSIS_COLUMN_NAME": "_ANALYSIS",

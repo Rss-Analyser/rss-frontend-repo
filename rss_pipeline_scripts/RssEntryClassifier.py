@@ -69,9 +69,19 @@ def get_most_similar_class(title, class_embeddings, classes, threshold):
 
 # DEFAULT_CLASSES = ["News", "Entertainment", "Sports", "Economy", "Technology", "Science", "Stock Market", "Reviews", "Business", "Finance", "Politics"]
 # DEFAULT_THRESHOLD = 0.75
-# DATABASE_PATH = st.secrets["cockroachdb"]["connection_string"]
 
 
-# classify_titles_from_db(DATABASE_PATH, classes=DEFAULT_CLASSES, threshold=DEFAULT_THRESHOLD)
+if __name__ == "__main__":
+
+    def load_config():
+        with open("/Users/danieltremer/Documents/RssFeed_Analyser/rss-frontend-repo/rss_pipeline_scripts/config.json", "r") as file:
+            return json.load(file)
+        
+    config = load_config()
+            
+    DEFAULT_CLASSES = config["params"]["DEFAULT_CLASSES"]
+    DEFAULT_THRESHOLD = config["params"]["DEFAULT_THRESHOLD"]
+    DATABASE_PATH = st.secrets["cockroachdb"]["connection_string"]
 
 
+    classify_titles_from_db(DATABASE_PATH, classes=DEFAULT_CLASSES, threshold=DEFAULT_THRESHOLD)

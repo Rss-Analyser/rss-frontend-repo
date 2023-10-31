@@ -28,7 +28,6 @@ class CaptureOutputToQueue:
     def __exit__(self, exc_type, exc_val, exc_tb):
         sys.stdout = self._stdout
 
-# ... (rest of your code)
 
 def threaded_function(q):
     with CaptureOutputToQueue(q):

@@ -11,3 +11,6 @@ torchvision
 streamlit
 lxml
 bs4
+openai
+supabase
+newspaper
