@@ -11,7 +11,7 @@ import yaml
 import psycopg2
 import streamlit as st
 import psycopg2.extras
-
+import json
 
 class WebsiteRssFeedExtractor:
     DATABASE_PATH = st.secrets["cockroachdb"]["connection_string"]
@@ -227,29 +227,16 @@ class WebsiteRssFeedExtractor:
         # conn.close()
 
 
+if __name__ == "__main__":
 
+    def load_config():
+            with open("/Users/danieltremer/Documents/RssFeed_Analyser/rss-frontend-repo/rss_pipeline_scripts/config.json", "r") as file:
+                return json.load(file)
 
-# website_urls = [
-#             "https://github.com/plenaryapp/awesome-rss-feeds",
-#             "https://raw.githubusercontent.com/androidsx/micro-rss/master/list-of-feeds.txt",
-#             "https://github.com/joshuawalcher/rssfeeds",
-#             "https://raw.githubusercontent.com/impressivewebs/frontend-feeds/master/frontend-feeds.opml",
-#             "https://raw.githubusercontent.com/tuan3w/awesome-tech-rss/main/feeds.opml",
-#             "https://github.com/plenaryapp/awesome-rss-feeds/tree/master/recommended/with_category",
-#             "https://github.com/plenaryapp/awesome-rss-feeds/tree/master/countries/without_category",
-#             "https://gist.githubusercontent.com/stungeye/fe88fc810651174d0d180a95d79a8d97/raw/35cf2dc0db2c28aac21d03709592567c3fc60180/crypto_news.json",
-#             "https://raw.githubusercontent.com/yavuz/news-feed-list-of-countries/master/news-feed-list-of-countries.json",
-#             "https://raw.githubusercontent.com/git-list/security-rss-list/master/README.md",
-#             "https://gist.githubusercontent.com/webpro/5907452/raw/a71a3b59c108267fb667510dbe91154035f1ed10/feeds.opml",
-#             "https://raw.githubusercontent.com/outcoldman/hackernews-personal-blogs/master/list.opml",
-#             "https://raw.githubusercontent.com/matthiasjost/dotnet-creators-opml/main/OPML/blog-opml.xml",
-#             "https://raw.githubusercontent.com/EllyLoel/RSS-feed-collection/main/subscriptions.xml",
-#             "https://raw.githubusercontent.com/scripting/feedsForJournalists/master/list.opml",
-#             "https://raw.githubusercontent.com/vortexau/FeedlySecurityFeeds/master/feedly-security.opml"
-#         ]
+    config = load_config()
 
-# rss_links = ["http://127.0.0.1:1200/bloomberg/"]
+    website_urls = config["params"]["URLS"]
+    rss_links = config["params"]["RSS_LINKS"]
 
-# extractor = WebsiteRssFeedExtractor(max_depth=4)
-# extractor.start_crawler(website_urls, rss_links)
-
+    extractor = WebsiteRssFeedExtractor(max_depth=4)
+    extractor.start_crawler(website_urls, rss_links)

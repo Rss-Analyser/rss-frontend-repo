@@ -384,25 +384,26 @@ def mark_scheduled_in_db(tweets_data, db_params):
 
 
 # tweets_data = fetch_generated_tweets_from_db(db_params=DATABASE_PATH, days_back=30, selected_class="All Classes")
+if __name__ == "__main__":
+    
+    input_uuid = "6722db1e-eb96-4651-96d7-8c064151541d"
+    api_data = fetch_api_data(input_uuid)
+    print(api_data)
 
-input_uuid = "6722db1e-eb96-4651-96d7-8c064151541d"
-api_data = fetch_api_data(input_uuid)
-print(api_data)
+    # Fetch the tweets
+    tweets_data = fetch_generated_tweets_from_db(DATABASE_PATH, 1, "All Classes")
 
-# Fetch the tweets
-tweets_data = fetch_generated_tweets_from_db(DATABASE_PATH, 1, "All Classes")
+    for tweet in tweets_data:
+        print("--------------")
+        print(tweet["tweet"])
+        print(tweet["published"])
+        print("--------------")
 
-for tweet in tweets_data:
-    print("--------------")
-    print(tweet["tweet"])
-    print(tweet["published"])
-    print("--------------")
+    # Schedule the tweets over the day
+    schedule_tweets_over_day(tweets_data, input_uuid, api_data, DATABASE_PATH)
 
-# Schedule the tweets over the day
-schedule_tweets_over_day(tweets_data, input_uuid, api_data, DATABASE_PATH)
+    # Mark tweets as scheduled in CockroachDB
+    mark_scheduled_in_db(tweets_data, DATABASE_PATH)
 
-# Mark tweets as scheduled in CockroachDB
-mark_scheduled_in_db(tweets_data, DATABASE_PATH)
-
-print("Done scheduling tweets.")
+    print("Done scheduling tweets.")
 

@@ -1,10 +1,10 @@
 {
     "steps": {
-        "extract": true,
-        "read": true,
+        "extract": false,
+        "read": false,
         "classify_titles": true,
-        "classify_sentiments": true,
-        "classify_language": true,
+        "classify_sentiments": false,
+        "classify_language": false,
         "analyze_titles": true,
         "fetch_and_print": true
     },
@@ -30,7 +30,10 @@
         "RSS_LINKS": [
             "http://127.0.0.1:1200/bloomberg/",
             "http://127.0.0.1:1200/dlnews",
-            "http://127.0.0.1:1200/appleinsider"
+            "http://127.0.0.1:1200/appleinsider",
+            "http://127.0.0.1:1200/openai/blog",
+            "https://rss-bridge.org/bridge01/?action=display&bridge=GithubTrendingBridge&context=By+language&language=python&date_range=today&format=Atom",
+            "https://rss-bridge.org/bridge01/?action=display&bridge=XPathBridge&url=https%3A%2F%2Fnews.blizzard.com%2Fen-en&item=%2Fhtml%2Fbody%2Fdiv%2Fdiv%5B4%5D%2Fdiv%5B2%5D%2Fdiv%5B2%5D%2Fdiv%2Fdiv%2Fsection%2Fol%2Fli%2Farticle&title=.%2F%2Fdiv%2Fdiv%5B2%5D%2Fh2&content=.%2F%2Fdiv%5B%40class%3D%22ArticleListItem-description%22%5D%2Fdiv%5B%40class%3D%22h6%22%5D&uri=.%2F%2Fa%5B%40class%3D%22ArticleLink+ArticleLink%22%5D%2F%40href&author=&timestamp=.%2F%2Ftime%5B%40class%3D%22ArticleListItem-footerTimestamp%22%5D%2F%40timestamp&enclosures=.%2F%2Fdiv%5B%40class%3D%22ArticleListItem-image%22%5D%2F%40style&categories=.%2F%2Fdiv%5B%40class%3D%22ArticleListItem-label%22%5D&format=Atom"
         ],
         "DEFAULT_CLASSES": [
             "News",
@@ -48,7 +51,7 @@
             "Solopreneur",
             "AI, Artificial Intelligence"
         ],
-        "DEFAULT_THRESHOLD": 0.77,
+        "DEFAULT_THRESHOLD": "0.77",
         "ANALYSIS_INSTRUCTION": "Context: You are a writer for AI, Science and technology topics and news, your interest is in every new AI innovations and Robotics and Technology innovations.\nClassify the news headline importance in your context: high, medium, low\nDo a sentiment classification in your context: positive, negative, neutral\nDo a reasoning about your classification decision describe why. \n\nReturn a single json with following info: \n- Reason\n- Sentiment\n- Importance\nonly return the json without anything else",
         "ANALYSIS_COLUMN_NAME_BASE": "ai_bot",
         "ANALYSIS_LANGUAGES": [

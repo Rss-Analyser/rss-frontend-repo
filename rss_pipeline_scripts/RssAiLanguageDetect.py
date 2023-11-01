@@ -44,7 +44,8 @@ def classify_titles_language_from_db(cockroachdb_conn_str, increment_func=None):
 
         conn.commit()
     conn.close()
-
-# Database connection string example
-DATABASE_PATH = st.secrets["cockroachdb"]["connection_string"]
-classify_titles_language_from_db(DATABASE_PATH)
+    
+if __name__ == "__main__":
+    # Database connection string example
+    DATABASE_PATH = st.secrets["cockroachdb"]["connection_string"]
+    classify_titles_language_from_db(DATABASE_PATH)
